@@ -16,15 +16,13 @@ library(readr)
 
 MongoDB and R together workshop.
 1. Install MongoDB server using MongoDB documentation and not old packages in repo
-  a. Version 4.4.1
-  b. systemctl start mongod
-  c. mongo to enter shell (db.help()) 
+  + Version 4.4.1
+  + systemctl start mongod
+  + mongo to enter shell (db.help()) 
 2. Connect and create MongoDB collection from online data source 
 3. Import the data back from MongoDB
 4. Grab new data and append to the collection
 5. Use gganimate to publish shiny horizontal bar chart 
-
-## Inputs and Outputs
 
 
 ```{r , echo=TRUE}
@@ -34,25 +32,4 @@ mongo(url = "mongodb://127.0.0.1:27017")
 
 
 ```
-
-## Embedded Application
-
-It's also possible to embed an entire Shiny application within an R Markdown document using the `shinyAppDir` function. This example embeds a Shiny application located in another directory:
-
-```{r tabsets, echo=FALSE}
-shinyAppDir(
-  system.file("examples/06_tabsets", package = "shiny"),
-  options = list(
-    width = "100%", height = 550
-  )
-)
-```
-
-Note the use of the `height` parameter to determine how much vertical space the embedded application should occupy.
-
-You can also use the `shinyApp` function to define an application inline rather then in an external directory.
-
-In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
-
-
 
