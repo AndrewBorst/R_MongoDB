@@ -1,0 +1,11 @@
+---
+author: "Andy Borst"
+date: "11/1/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<img src="https://raw.githubusercontent.com/AndrewBorst/R_MongoDB/main/gganim.gif" width="800" height="600"   />
