@@ -17,9 +17,8 @@ library(gifski)
 #   + mongo to enter shell (db.help())
 #   + url = "mongodb://127.0.0.1:27017"
 # 2. Connect and create MongoDB collection from online data source 
-# 3. Import the data back from MongoDB
-# 4. Grab new data and append to the collection
-# 5. Use gganimate to publish shiny horizontal bar chart 
+# 3. Import the data back from MongoDB if the data from source is current
+# 5. Use gganimate to publish trending bar chart 
 
 # read in state popluations and save to mongo (used for per capita calculations)
 # state_abbreviations <- jsonlite::fromJSON(txt = "Data/state_abbreviations.json")
@@ -74,33 +73,36 @@ if(!df$date == today()) {
 # admin$disconnect()
 
 #m$run('{"count":"indiana"}')
-covid1 <- covid %>% mutate(state = if_else(state == "NYC", "NY", state))
 
-covid2 <- inner_join(covid1, state_populations, by = c("state" = "Code")) %>%
+covid1 <- covid %>% 
+  mutate(state = if_else(state == "NYC", "NY", state)) %>% 
+  inner_join(., state_populations, by = c("state" = "Code")) %>% 
+  select(submission_date, state_name = State, state_code = state, new_death, Population)
+
+#Last 30 Days 
+covid2 <- covid1  %>% 
+  filter(submission_date > today() - 30) %>%
+  group_by(state_name) %>% 
+  mutate(acc_sum = cumsum(new_death)) %>% 
   mutate(population = parse_number(Population)) %>% 
-  mutate(death_per_million = new_death / (population/1000000)) %>% 
-  select(submission_date, state_name = State, state_code = state, death_per_million)
+  mutate(Deaths = acc_sum / (population/1000000)) %>% 
+  ungroup()  
+  
 
-c <- covid2 %>%
-  mutate(weekNo = week(submission_date)) %>%
-  filter(weekNo > week(today()) - 12) %>% 
-  group_by(state_name, weekNo) %>%
-  summarise(Deaths = sum(death_per_million)) %>% 
-  ungroup()
+# Weekly
+# c <- covid2 %>%
+#   mutate(weekNo = week(submission_date)) %>%
+#   filter(weekNo > week(today()) - 12) %>% 
+#   group_by(state_name, weekNo) %>%
+#   summarise(Deaths = sum(death_per_million)) %>% 
+#   ungroup()
 
-# c_percent_increase <- c %>%
-#   group_by(state) %>%
-#   mutate(Percent = Deaths / lag(Deaths)) %>%
-#   filter(is.finite(Percent)) %>% 
-#   ungroup() 
-
-c_slice <-  c %>%
-  group_by(weekNo) %>%
+c_slice <-  covid2 %>%
+  group_by(submission_date) %>% 
   mutate(rank = rank(-Deaths),
          Value_rel = Deaths/Deaths[rank==1 | rank==1.5],
-         Value_lbl = paste0(" ",round(Deaths/1e9))) %>%
-  group_by(state_name) %>% 
-  filter(rank <=10) %>%
+         Value_lbl = paste0(" ",round(Deaths))) %>%
+  filter(rank <=20) %>%
   ungroup()
 
 p <- ggplot(c_slice, aes(rank, group = state_name, 
@@ -127,18 +129,20 @@ p <- ggplot(c_slice, aes(rank, group = state_name,
         panel.grid.minor=element_blank(),
         panel.grid.major.x = element_line( size=.1, color="grey" ),
         panel.grid.minor.x = element_line( size=.1, color="grey" ),
-        plot.title=element_text(size=25, hjust=0.5, face="bold", colour="grey", vjust=-1),
-        plot.subtitle=element_text(size=18, hjust=0.5, face="italic", color="grey"),
-        plot.caption =element_text(size=8, hjust=0.5, face="italic", color="grey"),
+        plot.title=element_text(size=20, hjust=0.5, face="bold", colour="grey"),
+        plot.subtitle=element_text(size=14, hjust=0.5, color="grey"),
+        plot.caption =element_text(size=10, hjust=0.5, color="grey"),
         plot.background=element_blank(),
         plot.margin = margin(2,2, 2, 4, "cm"))
 
-anim = p + transition_states(weekNo, transition_length = 6, state_length = 1) +
+anim <- p + transition_states(submission_date, transition_length = 6, state_length = 1) +
+# anim = p + transition_states(weekNo, transition_length = 6, state_length = 1) +
   view_follow(fixed_x = TRUE)  +
-  labs(title = 'COVID-19 deaths per million population as of Week {closest_state}',  
-       subtitle  =  "",
-       caption  = "Data Source: Scorata")
+  labs(title = 'COVID-19 deaths per million population',  
+       subtitle  =  "Cumulative 30 Days {closest_state}",
+       caption  = "Data Source: Scorata") +
+  exit_fade()
 
-animate(anim, nframes = 400, fps = 10,  width = 1200, height = 1000, end_pause = 10,
+animate(anim, nframes = 400, fps = 10,  width = 800, height = 600,
         renderer = gifski_renderer("gganim.gif"))
 
